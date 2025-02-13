@@ -4,9 +4,12 @@ on:
   push:
     branches:
       - dev # CI/CD hanya berjalan di branch `dev`
+  pull_request:
+    branches:
+      - dev # Menjalankan juga saat ada PR ke `dev`
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,9 +22,6 @@ jobs:
           php-version: "8.2"
           extensions: mbstring, intl, pdo, pdo_mysql
 
-      - name: Clear Composer Cache
-        run: composer clear-cache
-
       - name: Install Dependencies
         run: composer install --prefer-dist --no-progress --no-suggest
 
@@ -33,22 +33,3 @@ jobs:
 
       - name: Run Tests
         run: php vendor/bin/phpunit
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /var/www/html/E-Government
-            git pull origin dev
-            composer install --no-dev --prefer-dist
-            php spark migrate
-            php spark cache:clear
-            systemctl restart apache2
