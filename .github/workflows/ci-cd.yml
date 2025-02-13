@@ -19,8 +19,11 @@ jobs:
           php-version: "8.2"
           extensions: mbstring, intl, pdo, pdo_mysql
 
+      - name: Clear Composer Cache
+        run: composer clear-cache
+
       - name: Install Dependencies
-        run: composer install --no-dev --prefer-dist --optimize-autoloader
+        run: composer install --prefer-dist --no-progress --no-suggest
 
       - name: Set Up CI4
         run: |
@@ -29,7 +32,7 @@ jobs:
           php spark migrate
 
       - name: Run Tests
-        run: vendor/bin/phpunit
+        run: php vendor/bin/phpunit
 
   deploy:
     needs: build
@@ -43,7 +46,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /var/www/html/project-ci4
+            cd /var/www/html/E-Government
             git pull origin dev
             composer install --no-dev --prefer-dist
             php spark migrate
