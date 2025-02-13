@@ -1,0 +1,51 @@
+name: CI/CD for CodeIgniter 4
+
+on:
+  push:
+    branches:
+      - dev # CI/CD hanya berjalan di branch `dev`
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, intl, pdo, pdo_mysql
+
+      - name: Install Dependencies
+        run: composer install --no-dev --prefer-dist --optimize-autoloader
+
+      - name: Set Up CI4
+        run: |
+          cp env .env
+          php spark key:generate
+          php spark migrate
+
+      - name: Run Tests
+        run: vendor/bin/phpunit
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/html/project-ci4
+            git pull origin dev
+            composer install --no-dev --prefer-dist
+            php spark migrate
+            php spark cache:clear
+            systemctl restart apache2
